@@ -27,6 +27,7 @@ def download_html(inp: (str, str)):
         download_html(inp)
     if response.status_code != 200:
         print(f"Error occured: {response.status_code} when trying to download writeup #{writeup_str}")
+        return
     with open(filename, "wb") as file:
         file.write(response.content)
     print(f"Successfully downloaded writeup #{writeup_str}")
