@@ -2,11 +2,12 @@
 ### CTFtime can't handle so many requests, so i just made it sequential and 1 thread 
 ###
 ### sad.
-
-
+###
+### However you can choose what type of tactic you want to use
 
 import requests
-# from concurrent.futures import ThreadPoolExecutor
+import sys
+from concurrent.futures import ThreadPoolExecutor
 
 # generate urls for pools
 url_template = "https://ctftime.org/writeup/{i}"
@@ -23,6 +24,7 @@ def download_html(inp: (str, str)):
     response = requests.get(url, headers=headers)
     # let's not try to ddos ctftime and retry
     if response.status_code == 503:
+        print(f"Got 503 code on writeup #{writeup_str}")
         sleep(2)
         download_html(inp)
     if response.status_code != 200:
@@ -32,5 +34,22 @@ def download_html(inp: (str, str)):
         file.write(response.content)
     print(f"Successfully downloaded writeup #{writeup_str}")
 
-for inp in urls_and_files:
-    download_html(inp)
+def main():
+    if len(sys.argv) > 2:
+        print("USAGE:\nSingle thread: python scripts/download_writeups\nMulti thread: python scripts/download_writeups multi") 
+        exit(0)
+    if len(sys.argv) == 2: 
+        if sys.argv[1] == "multi":
+            print("Starting downloading writeups from CTFTime concurrently")
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                executor.map(download_html, urls_and_files)
+        else:
+            print("USAGE:\nSingle thread: python scripts/download_writeups\nMulti thread: python scripts/download_writeups multi") 
+            exit(0)
+    else:
+        print("Starting downloading writeups from CTFTime using one thread")
+        for inp in urls_and_files:
+            download_html(inp)
+
+if __name__ == "__main__":
+    main()
