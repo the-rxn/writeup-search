@@ -2,10 +2,11 @@ use async_channel::{bounded, unbounded};
 use indicatif::ProgressBar;
 use mdka::from_html;
 use once_cell::sync::Lazy;
-use reqwest::StatusCode;
+use reqwest::{StatusCode, ClientBuilder};
 use scraper::{Html, Selector};
-use std::sync::mpsc;
+use std::{sync::mpsc, fs::File};
 use std::thread;
+use std::io::{Read, BufReader, BufRead};
 use tantivy::{
     doc,
     query::{EnableScoring, QueryParser},
@@ -350,15 +351,44 @@ fn index<P: AsRef<std::path::Path>>(
 
     log::info!("spawning {} page fetching green threads", threads);
 
-    for _ in 0..std::cmp::max(1, threads / 2) {
+    // let proxies_file = File::open("./good.txt")?;
+    // let buf = BufReader::new(proxies_file);
+    // let mut proxies: Vec<String> = buf.lines().map(|l| l.expect("Could not parse line")).collect();
+    //
+    // for _ in 0..(threads*5) {
+    //     // let page_number_sender = page_number_sender.clone();
+    //     let sender = sender.clone();
+    //     let page_number_reciever = page_number_reciever.clone();
+    //     let proxy = proxies.pop().unwrap();
+    //     let client = ClientBuilder::new().proxy(reqwest::Proxy::http(format!("http://{}",proxy))?).build()?;
+
+        let proxies_file = File::open("./proxies.txt")?;
+    let buf = BufReader::new(proxies_file);
+    let mut proxies: Vec<(String, String)> = buf
+        .lines()
+        .into_iter()
+        .map(|l| {
+            let string = l.unwrap();
+            let (str1, str2) = string.split_once("@").unwrap();
+            (format!("https://{}",str1), str2.to_string())
+        })
+        .collect();
+
+    for _ in 0..(threads * 5) {
         // let page_number_sender = page_number_sender.clone();
         let sender = sender.clone();
         let page_number_reciever = page_number_reciever.clone();
+        let (proxy, creds) = proxies.pop().unwrap();
+        let (username, password) = creds.split_once(":").unwrap();
+        let client = ClientBuilder::new()
+            .proxy(reqwest::Proxy::http(proxy)?.basic_auth(username, password))
+            .build()?;
+
         tokio::spawn(async move {
             while let Ok(page_number) = page_number_reciever.recv().await {
                 let link = format!("https://ctftime.org/writeup/{}", page_number);
                 log::debug!("parsing page {}", link);
-                let request = match reqwest::get(&link).await {
+                let request = match client.get(&link).send().await {
                     Ok(request) => request,
                     Err(error) => {
                         log::error!(target:"ctftimesearch::fetcher","{}",error);
