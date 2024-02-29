@@ -420,6 +420,8 @@ dependencies = [
  "once_cell",
  "reqwest",
  "scraper",
+ "serde",
+ "serde_json",
  "tantivy",
  "termimad",
  "thiserror",

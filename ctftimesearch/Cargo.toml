@@ -14,6 +14,8 @@ mdka = "1.2.4"
 once_cell = "1.19.0"
 reqwest = { version = "0.11.24", features = ["blocking"] }
 scraper = "0.18.1"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
 tantivy = "0.21.1"
 termimad = "0.29.1"
 thiserror = "1.0.57"

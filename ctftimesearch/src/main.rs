@@ -6,7 +6,7 @@ use reqwest::{StatusCode, ClientBuilder};
 use scraper::{Html, Selector};
 use std::{sync::mpsc, fs::File};
 use std::thread;
-use std::io::{Read, BufReader, BufRead};
+use std::io::{Read, BufReader, BufRead, BufWriter, Write};
 use tantivy::{
     doc,
     query::{EnableScoring, QueryParser},
@@ -59,6 +59,7 @@ enum Error {
     Request(#[from] reqwest::Error),
 }
 
+#[derive(serde::Serialize)]
 struct Writeup {
     pub title: String,
     pub description: String,
@@ -75,8 +76,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let threads = 8;
-    let starting_page = 20000;
-    let ending_page = 30000;
+    let starting_page = 30000;
+    let ending_page = 38715;
     let buffer_size = 8000_000_000;
 
     index(threads, starting_page, ending_page, buffer_size, "./index")?;
@@ -329,8 +330,8 @@ fn index<P: AsRef<std::path::Path>>(
 
     let schema = schema_builder.build();
 
-    let mut index = Index::create_in_dir(index_path, schema.clone())?;
-    index.set_multithread_executor(threads)?;
+    // let mut index = Index::create_in_dir(index_path, schema.clone())?;
+    // index.set_multithread_executor(threads)?;
 
     let (page_number_sender, page_number_reciever) = unbounded();
 
@@ -362,26 +363,26 @@ fn index<P: AsRef<std::path::Path>>(
     //     let proxy = proxies.pop().unwrap();
     //     let client = ClientBuilder::new().proxy(reqwest::Proxy::http(format!("http://{}",proxy))?).build()?;
 
-        let proxies_file = File::open("./proxies.txt")?;
-    let buf = BufReader::new(proxies_file);
-    let mut proxies: Vec<(String, String)> = buf
-        .lines()
-        .into_iter()
-        .map(|l| {
-            let string = l.unwrap();
-            let (str1, str2) = string.split_once("@").unwrap();
-            (format!("https://{}",str1), str2.to_string())
-        })
-        .collect();
+    //     let proxies_file = File::open("./proxies.txt")?;
+    // let buf = BufReader::new(proxies_file);
+    // let mut proxies: Vec<(String, String)> = buf
+    //     .lines()
+    //     .into_iter()
+    //     .map(|l| {
+    //         let string = l.unwrap();
+    //         let (str1, str2) = string.split_once("@").unwrap();
+    //         (format!("https://{}",str1), str2.to_string())
+    //     })
+    //     .collect();
 
-    for _ in 0..(threads * 5) {
+    for _ in 0..4 {
         // let page_number_sender = page_number_sender.clone();
         let sender = sender.clone();
         let page_number_reciever = page_number_reciever.clone();
-        let (proxy, creds) = proxies.pop().unwrap();
-        let (username, password) = creds.split_once(":").unwrap();
+        // let (proxy, creds) = proxies.pop().unwrap();
+        // let (username, password) = creds.split_once(":").unwrap();
         let client = ClientBuilder::new()
-            .proxy(reqwest::Proxy::http(proxy)?.basic_auth(username, password))
+            // .proxy(reqwest::Proxy::http(proxy)?.basic_auth(username, password))
             .build()?;
 
         tokio::spawn(async move {
@@ -450,23 +451,24 @@ fn index<P: AsRef<std::path::Path>>(
                         continue;
                     }
                 };
-                let mut document = doc!(
-                    title => writeup.title,
-                    description => writeup.description,
-                    author => writeup.author,
-                    event => writeup.event,
-                    link => writeup.link,
-                );
-                if let Some(team_name) = writeup.team {
-                    document.add_text(team, team_name);
-                }
-                if let Some(link) = writeup.orig_writeup_link {
-                    document.add_text(orig_writeup_link, link);
-                }
-                for tag in writeup.tags {
-                    document.add_text(tags, tag);
-                }
-                match document_sender.send(document) {
+                let writeup_json = serde_json::to_string(&writeup).unwrap();
+                // let mut document = doc!(
+                //     title => writeup.title,
+                //     description => writeup.description,
+                //     author => writeup.author,
+                //     event => writeup.event,
+                //     link => writeup.link,
+                // );
+                // if let Some(team_name) = writeup.team {
+                //     document.add_text(team, team_name);
+                // }
+                // if let Some(link) = writeup.orig_writeup_link {
+                //     document.add_text(orig_writeup_link, link);
+                // }
+                // for tag in writeup.tags {
+                //     document.add_text(tags, tag);
+                // }
+                match document_sender.send(writeup_json) {
                     Ok(()) => {}
                     Err(error) => log::error!(target:"ctftimesearch::parser","{}",error),
                 };
@@ -476,20 +478,24 @@ fn index<P: AsRef<std::path::Path>>(
     drop(reciever);
     drop(document_sender);
 
-    log::info!("creating index writer with {} threads", threads);
-
-    let mut index_writer = index.writer_with_num_threads(threads, buffer_size)?;
-
-    log::info!("starting indexing");
-
+    // log::info!("creating index writer with {} threads", threads);
+    //
+    // let mut index_writer = index.writer_with_num_threads(threads, buffer_size)?;
+    //
+    // log::info!("starting indexing");
+    //
     let bar = ProgressBar::new(ending_page - starting_page);
+    let file = File::create("./doc3.json").unwrap();
+    let mut file = BufWriter::new(file);
 
     while let Ok(document) = document_reciever.recv() {
-        index_writer.add_document(document)?;
+
+        // index_writer.add_document(document)?;
+        file.write_all(document.as_bytes()).unwrap();
         bar.inc(1);
     }
     bar.finish();
     log::info!("finished indexing, committing");
-    let _res = index_writer.commit()?;
+    // let _res = index_writer.commit()?;
     Ok(())
 }
