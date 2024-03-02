@@ -1,15 +1,13 @@
 .app {
   text-align: center;
-  margin-top: 80px
 }
 
-.searchResults {
+/* .searchResults {
   width: 800px;
   margin: 100px auto 0 auto;
   text-align: left;
-}
-
-li {
+} */
+/* li {
   display: inline;
   margin-right: 5px;
   border: 1px solid gray;
@@ -19,4 +17,4 @@ li {
 
 ul {
   padding-left: 0;
-}
+} */
