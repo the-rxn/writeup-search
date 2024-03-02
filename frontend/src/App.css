@@ -1,0 +1,22 @@
+.app {
+  text-align: center;
+  margin-top: 80px
+}
+
+.searchResults {
+  width: 800px;
+  margin: 100px auto 0 auto;
+  text-align: left;
+}
+
+li {
+  display: inline;
+  margin-right: 5px;
+  border: 1px solid gray;
+  border-radius: 2px;
+  padding: 4px;
+}
+
+ul {
+  padding-left: 0;
+}
