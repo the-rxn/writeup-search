@@ -1,0 +1,29 @@
+services:
+  ts-marqo:
+    image: tailscale/tailscale:latest
+    hostname: marqo
+    environment:
+      - TS_AUTHKEY=$TS_AUTHKEY
+      - TS_EXTRA_ARGS=--advertise-tags=tag:container
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - tailscale-data-marqo:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+      - sys_module
+    restart: unless-stopped
+  marqo:
+    image: marqoai/marqo
+    network_mode: service:ts-marqo
+    ports:
+      - "8882:8882"
+    depends_on: 
+      - ts-marqo
+    volumes:    
+      - vespa_data:/opt/vespa/
+volumes:
+  tailscale-data-marqo:
+    driver: local
+  vespa_data:
+    external: true
