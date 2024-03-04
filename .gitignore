@@ -2,3 +2,6 @@ pyvenv.cfg
 .venv
 writeups
 __pycache__
+.direnv/*
+.devenv/*
+.envrc
