@@ -20,13 +20,13 @@ def main():
 
 
 
-    mq = marqo.Client(url=parser.url)
+    mq = marqo.Client(url=args.url)
     INDEX_NAME = "writeups"
     BATCH_SIZE=4
     STOPPED_AT=384
 
     mq.create_index(INDEX_NAME)
-    documents = read_writeups_json(parser.filename)
+    documents = read_writeups_json(args.filename)
     n = BATCH_SIZE
     documents_batched= [documents[i * n:(i + 1) * n] for i in range((len(documents) + n - 1) // n )]
     num = 0
