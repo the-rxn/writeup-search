@@ -1,29 +1,21 @@
 services:
-  ts-marqo:
-    image: tailscale/tailscale:latest
-    hostname: marqo
-    environment:
-      - TS_AUTHKEY=$TS_AUTHKEY
-      - TS_EXTRA_ARGS=--advertise-tags=tag:container
-      - TS_STATE_DIR=/var/lib/tailscale
-    volumes:
-      - tailscale-data-marqo:/var/lib/tailscale
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - net_admin
-      - sys_module
-    restart: unless-stopped
-  marqo:
-    image: marqoai/marqo
-    network_mode: service:ts-marqo
+  marqo-custom:
+    build:
+      context: scripts/.
+      dockerfile: Dockerfile
     ports:
       - "8882:8882"
+  front:
+    build:
+      context: frontend/
+      dockerfile: Dockerfile
     depends_on: 
-      - ts-marqo
-    volumes:    
-      - vespa_data:/opt/vespa/
-volumes:
-  tailscale-data-marqo:
-    driver: local
-  vespa_data:
-    external: true
+      - marqo-custom
+    healthcheck:
+      test: "[[ $(curl --fail http://localhost:8882/indexes | grep -ic 'writeups') -eq 1 ]] || exit 1"
+      interval: 5s
+      retries: 10
+      start_period: 20s
+      timeout: 10s
+    ports:
+      - "4173:4173"
