@@ -34,7 +34,7 @@ RUN tar --same-owner -xvf ./back.tar.gz
 
 RUN echo "Extracted data. Now adding predone writeup embeddings into vespa..."
 
-ENTRYPOINT ["/bin/bash", "-c", "./run_marqo.sh & ./is_vespa_ready.sh"]
+ENTRYPOINT ["/bin/bash", "-c", "./run_marqo.sh & ./is_vespa_ready.sh &"]
 
 
 
